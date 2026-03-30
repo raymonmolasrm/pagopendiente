@@ -151,6 +151,14 @@ client.on('interactionCreate', async (interaction) => {
         }
       }
 
+      // Eliminar mensajes de texto del bot (ej: "Pago marcado como pagado por...")
+      for (const msg of mensajes.values()) {
+        if (msg.embeds.length) continue;
+        if (msg.author?.id === client.user.id && msg.content) {
+          await msg.delete();
+        }
+      }
+
       ultimo = mensajes.last()?.id;
       if (mensajes.size < 100) break;
     }
