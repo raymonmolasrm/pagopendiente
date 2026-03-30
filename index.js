@@ -107,6 +107,58 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
+  // ── /limpiar → mover pagos ya pagados al canal de completados ───────────
+  if (interaction.isChatInputCommand() && interaction.commandName === 'limpiar') {
+    await interaction.deferReply({ ephemeral: true });
+
+    const canalPagos   = await client.channels.fetch(process.env.CANAL_PAGOS_ID);
+    const canalPagados = await client.channels.fetch(process.env.CANAL_PAGADOS_ID);
+
+    if (!canalPagos || !canalPagados) {
+      await interaction.editReply('No se encontraron los canales. Verificá los IDs en las variables.');
+      return;
+    }
+
+    let movidos = 0;
+    let ultimo = null;
+
+    // Recorrer todos los mensajes del canal en tandas de 100
+    while (true) {
+      const opciones = { limit: 100 };
+      if (ultimo) opciones.before = ultimo;
+
+      const mensajes = await canalPagos.messages.fetch(opciones);
+      if (mensajes.size === 0) break;
+
+      for (const msg of mensajes.values()) {
+        if (!msg.embeds.length) continue;
+
+        const embed = msg.embeds[0];
+        const estadoField = embed.fields?.find(f => f.name === '📋 Estado');
+
+        // Si el estado es Pagado o el botón está deshabilitado → mover
+        const botonDeshabilitado = msg.components?.[0]?.components?.[0]?.disabled;
+        const esPagado = estadoField?.value?.includes('Pagado') || botonDeshabilitado;
+
+        if (esPagado) {
+          const embedMovido = EmbedBuilder.from(embed)
+            .setTitle('✅ Pago Completado')
+            .setColor(0x00C851);
+
+          await canalPagados.send({ embeds: [embedMovido] });
+          await msg.delete();
+          movidos++;
+        }
+      }
+
+      ultimo = mensajes.last()?.id;
+      if (mensajes.size < 100) break;
+    }
+
+    await interaction.editReply(`Limpieza completada. Se movieron **${movidos}** pago(s) al canal de completados.`);
+    return;
+  }
+
   // ── Botón "Pagado" → mover al canal de pagados ───────────────────────────
   if (interaction.isButton() && interaction.customId === 'btn_pagado') {
     const mensaje = interaction.message;

@@ -6,6 +6,10 @@ const commands = [
     .setName('pago')
     .setDescription('Crear un nuevo pago pendiente')
     .toJSON(),
+  new SlashCommandBuilder()
+    .setName('limpiar')
+    .setDescription('Mover pagos ya completados al canal de pagados')
+    .toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
