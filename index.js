@@ -192,14 +192,12 @@ client.on('interactionCreate', async (interaction) => {
       })
       .setTimestamp();
 
+    // Reconocer la interacción sin mostrar ningún mensaje
+    await interaction.deferUpdate();
+
     // Enviar al canal de pagados y eliminar del canal de pendientes
     await canalPagados.send({ embeds: [embedActualizado] });
     await mensaje.delete();
-
-    await interaction.reply({
-      content: `Pago marcado como pagado por <@${interaction.user.id}>.`,
-      ephemeral: true,
-    });
     return;
   }
 });
