@@ -107,7 +107,7 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
-  // ── Botón "Pagado" → actualizar embed ────────────────────────────────────
+  // ── Botón "Pagado" → mover al canal de pagados ───────────────────────────
   if (interaction.isButton() && interaction.customId === 'btn_pagado') {
     const mensaje = interaction.message;
     const embedOriginal = mensaje.embeds[0];
@@ -117,8 +117,16 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
+    const canalPagados = await client.channels.fetch(process.env.CANAL_PAGADOS_ID);
+
+    if (!canalPagados) {
+      await interaction.reply({ content: 'No se encontró el canal de pagados. Verificá CANAL_PAGADOS_ID.', ephemeral: true });
+      return;
+    }
+
     // Reconstruir el embed con estado actualizado
     const embedActualizado = EmbedBuilder.from(embedOriginal)
+      .setTitle('✅ Pago Completado')
       .setColor(0x00C851)
       .spliceFields(
         embedOriginal.fields.findIndex(f => f.name === '📋 Estado'),
@@ -132,20 +140,13 @@ client.on('interactionCreate', async (interaction) => {
       })
       .setTimestamp();
 
-    // Deshabilitar el botón
-    const botonDeshabilitado = new ButtonBuilder()
-      .setCustomId('btn_pagado')
-      .setLabel('✅ Pagado')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true);
-
-    const filaActualizada = new ActionRowBuilder().addComponents(botonDeshabilitado);
-
-    await mensaje.edit({ embeds: [embedActualizado], components: [filaActualizada] });
+    // Enviar al canal de pagados y eliminar del canal de pendientes
+    await canalPagados.send({ embeds: [embedActualizado] });
+    await mensaje.delete();
 
     await interaction.reply({
       content: `Pago marcado como pagado por <@${interaction.user.id}>.`,
-      ephemeral: false,
+      ephemeral: true,
     });
     return;
   }
